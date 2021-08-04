@@ -279,7 +279,8 @@ def watch(
     bucket_name: the bucket name that's mounted in the watch_dir directory (used by the pipeline to fetch the sample files)
     """
     print(doc)
-    watch_dirs = [f"/data/inputs/s3/{bucket}" for bucket in config.buckets]
+    watch_dir_root="/data/inputs/s3"
+    watch_dirs = [f"{watch_dir_root}/{bucket}" for bucket in config.buckets]
     for watch_dir in watch_dirs:
         watch_dir = Path(watch_dir)
         if not watch_dir.is_dir():
@@ -289,24 +290,26 @@ def watch(
     while True:
         # get all directories in bucket
         # note that directories are named after submission uuids, so this is effectively a list of submission uuids
-        candidate_dirs = set()
         for watch_dir in watch_dirs:
+
+            candidate_dirs = set()
             for x in Path(watch_dir).glob("*"):
                 if x.is_dir():
                     candidate_dirs.add(x.name)
 
-        # get directories that have already been processed
-        cached_dirlist = set()
-        for watch_dir in watch_dirs:
+            # get directories that have already been processed
+            cached_dirlist = set()
             for d in get_cached_dirlist(str(watch_dir)):
                 cached_dirlist.add(d)
-        # get directories that need to be checked
-        new_dirs = candidate_dirs.difference(cached_dirlist)
 
-        if new_dirs:
-            apex_token = get_apex_token()
-        for watch_dir in watch_dirs:
+            # get directories that need to be checked
+            new_dirs = candidate_dirs.difference(cached_dirlist)
+
+            if new_dirs:
+                apex_token = get_apex_token()
+
             for new_dir in new_dirs:  #  new_dir is the catsup upload uuid
+                bucket_name=Path(watch_dir).parts[-1]
                 process_dir(
                     new_dir, watch_dir, pipeline, flow_name, bucket_name, apex_token
                 )
